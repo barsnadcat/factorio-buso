@@ -99,31 +99,103 @@ necessaryRecipes = set(["advanced-oil-processing",
 
 resourceList = set(["raw-wood", "water", "iron-ore", "copper-ore", "coal", "crude-oil", "stone", "radar"])
 
+recipesJson = None
+ingredientUsage = {}
+
 def main():
 	with open('recipes.json') as fp:
+		global recipesJson
 		recipesJson = json.load(fp)
 
-		ingredientUsage = {}
-		
+		global ingredientUsage
+
 		for name in necessaryRecipes:
 			recipeJson = recipesJson[name]
 			for ingredientJson in recipeJson["ingredients"]:
 				ingreidentName = ingredientJson["name"]
-				if ingreidentName not in resourceList:
-					ingredientUsage[ingreidentName] = ingredientUsage.get(ingreidentName, 0) + 1
+				ingredientUsage[ingreidentName] = ingredientUsage.get(ingreidentName, 0) + 1
 
 
-		for ingredient in sorted(ingredientUsage, key=ingredientUsage.get):
-			print(ingredient)
-			print(ingredientUsage[ingredient])
+		bus = set(resourceList)
+		recipes = set(necessaryRecipes)
+
+		while recipes != set():
+			print(bus)
+
+			leafRecipes = GetLeafRecipes(GetAvailableRecipes(recipes, bus))
+			for recipe in leafRecipes:
+				## Use recipe
+				print("Use ", recipe)
+				recipes.remove(recipe)
+		
+
+			bestNewLine = GetBestNewLine(GetAvailableRecipes(recipes, bus))
+
+			## Use recipe
+			print("Use ",bestNewLine)
+			recipes.remove(bestNewLine)
+			AddProductsToBus(bus, bestNewLine)
+
+
+	
+def AddProductsToBus(bus, recipe):
+	recipeJson = recipesJson[recipe]
+	for productJson in recipeJson["products"]:
+		bus.add(productJson["name"])
+
+def GetLeafRecipes(recipes):
+	result = set()
+
+	for recipe in recipes:
+		totalProductUsage = GetRecipeTotalProductUsage(recipe)
+		if totalProductUsage == 0:
+			result.add(recipe)
+
+	return result
+
+def GetRecipeTotalProductUsage(recipe):
+	recipeJson = recipesJson[recipe]
+	result = 0
+	for productJson in recipeJson["products"]:
+		result += ingredientUsage.get(productJson["name"], 0)
+	return result
+
+
+def GetBestNewLine(recipes):
+	m = 0
+	best = ""
+
+	for recipe in recipes:
+		totalProductUsage = GetRecipeTotalProductUsage(recipe)
+		if totalProductUsage > m:
+			m = totalProductUsage
+			best = recipe
+
+	return best
+
+
+def GetAvailableRecipes(recipes, bus):
+		result = set()
+		
+		for recipeName in recipes:
+			ingredients = set()
+			
+			recipeJson = recipesJson[recipeName]
+			for ingredientJson in recipeJson["ingredients"]:
+				ingredients.add(ingredientJson["name"])
+
+			if ingredients.issubset(bus):
+				result.add(recipeName)
+
+		return result
 
 
 		
 ## udpate bus
-## find out aviable recipies with current bus
-## add leaf recepies
-## add aviable line closing recepies
-## add new line recepie
+## find out aviable recipes with current bus
+## add available line closing recipes
+## add leaf recipes
+## add new line recipe
 ##     with most leaf consumers?
 ##     with most line closing consumers?
 ##     with most consumers?
