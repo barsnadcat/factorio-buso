@@ -120,8 +120,6 @@ necessaryRecipes = set([
 "stack-inserter",
 "filter-inserter",
 "firearm-magazine",
-"gate",
-"grenade",
 "gun-turret",
 "lab",
 "laser-turret",
@@ -251,15 +249,15 @@ def AddToBus(recipe, products, bus):
 	for ingredientJson in recipeJson["ingredients"]:
 		ingredientName = ingredientJson["name"]
 		## Introducing new resource
-		if ingredientName not in bus and ingredientName in resourceList:
-			print("New line", ingredientName)
+		if ingredientName not in bus and ingredientName in resourceList:			
 			bus[ingredientName] = productUsage[ingredientName]
+			print("New line", ingredientName, len(bus))
 		## Using stuff on bus
 		bus[ingredientName] -= 1
 		## Droping stuff from bus
 		if bus[ingredientName] == 0:
-			print("Close line", ingredientName)
 			del bus[ingredientName]
+			print("Close line", ingredientName, len(bus))
 
 	print("Do", recipe)
 
@@ -268,8 +266,8 @@ def AddToBus(recipe, products, bus):
 		products.add(productName)
 		usage = productUsage.get(productName, 0)
 		if usage > 0:
-			print("New line", productName)
 			bus[productName] = usage
+			print("New line", productName, len(bus))
 
 	##print(len(bus), bus.keys())
 
