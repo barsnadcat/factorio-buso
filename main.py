@@ -1,7 +1,7 @@
 import json
 import os
 
-necessaryRecipes = set(["advanced-oil-processing",
+necessaryRecipes = set(["basic-oil-processing",
 "accumulator",
 "advanced-circuit",
 "assembling-machine-1",
@@ -135,7 +135,6 @@ def main():
 					if effectJson["type"] == "unlock-recipe":
 						unlockedRecipe = effectJson["recipe"]
 						recipeRequiredItems[effectJson["recipe"]] = set(requiredItems)
-						print(unlockedRecipe, " ", requiredItems)
 
 			BuildBus()
 
@@ -147,15 +146,17 @@ def BuildBus():
 
 	while recipes != set():
 		leafRecipes = GetLeafRecipes(GetAvailableRecipes(recipes, products))
-		for recipe in leafRecipes:
-			print("Add leaf ", recipe)
-			recipes.remove(recipe)
-			AddProducts(products, recipe)
-	
-		bestNewLine = GetBestNewLine(GetAvailableRecipes(recipes, products))
-		print("New line ",bestNewLine)
-		recipes.remove(bestNewLine)
-		AddProducts(products, bestNewLine)
+		if leafRecipes != set():
+			for recipe in leafRecipes:
+				print("Add leaf ", recipe)
+				recipes.remove(recipe)
+				AddProducts(products, recipe)
+		else:
+			bestNewLine = GetBestNewLine(GetAvailableRecipes(recipes, products))
+			print("New line ",bestNewLine)
+			recipes.remove(bestNewLine)
+			AddProducts(products, bestNewLine)
+
 
 def AddProducts(products, recipe):
 	recipeJson = recipesJson[recipe]
@@ -181,12 +182,12 @@ def GetRecipeProductUsage(recipe):
 
 
 def GetBestNewLine(recipes):
-	m = -1
+	m = 999
 	best = ""
 
 	for recipe in recipes:
 		usage = GetRecipeProductUsage(recipe)
-		if usage > m:
+		if usage < m:
 			m = usage
 			best = recipe
 
@@ -195,7 +196,6 @@ def GetBestNewLine(recipes):
 
 def GetAvailableRecipes(recipes, products):
 		result = set()
-		
 		for recipeName in recipes:
 			if recipeName not in recipeRequiredItems or recipeRequiredItems[recipeName].issubset(products):
 				ingredients = set()
@@ -212,13 +212,12 @@ def GetAvailableRecipes(recipes, products):
 
 		
 ## udpate bus
-## find out aviable recipes with current bus
-## add available line closing recipes
+## find out aviable recipes with current products, including scinence packs
 ## add leaf recipes
 ## add new line recipe
-##     with most leaf consumers?
-##     with most line closing consumers?
-##     with most consumers?
+##     with most consumers? -- no
+##     1 добавлять сталь в начале, пока есть еще много рецептов которые можно стделать без нее - плохо
+##     2 добавлять проволоку на бас в начале ради зеленых плат, полохо - она понадобится потом не скоро!
 ## ...
 
 if __name__ == '__main__':
