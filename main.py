@@ -1,7 +1,7 @@
 import json
 import os
 
-necessaryRecipes = set(["basic-oil-processing",
+allowedRecipes = set(["basic-oil-processing",
 "accumulator",
 "advanced-circuit",
 "assembling-machine-1",
@@ -97,6 +97,77 @@ necessaryRecipes = set(["basic-oil-processing",
 "electric-furnace",
 "solid-fuel-from-heavy-oil"])
 
+necessaryRecipes = set([
+"assembling-machine-1",
+"assembling-machine-2",
+"boiler",
+"cargo-wagon",
+"chemical-plant",
+"concrete",
+"hazard-concrete",
+"construction-robot",
+"logistic-robot",
+"electric-mining-drill",
+"express-splitter",
+"express-transport-belt",
+"express-underground-belt",
+"fast-splitter",
+"fast-transport-belt",
+"fast-underground-belt",
+"splitter",
+"transport-belt",
+"underground-belt",
+"inserter",
+"fast-inserter",
+"stack-filter-inserter",
+"stack-inserter",
+"filter-inserter",
+"firearm-magazine",
+"fluid-wagon",
+"gate",
+"grenade",
+"gun-turret",
+"lab",
+"laser-turret",
+"locomotive",
+"logistic-chest-passive-provider",
+"logistic-chest-storage",
+"long-handed-inserter",
+"low-density-structure",
+"medium-electric-pole",
+"offshore-pump",
+"oil-refinery",
+"piercing-rounds-magazine",
+"pipe",
+"pipe-to-ground",
+"pumpjack",
+"rail",
+"rail-chain-signal",
+"rail-signal",
+"repair-pack",
+"roboport",
+"rocket-part",
+"science-pack-1",
+"science-pack-2",
+"science-pack-3",
+"high-tech-science-pack",
+"production-science-pack",
+"military-science-pack",
+"small-electric-pole",
+"big-electric-pole",
+"steam-engine",
+"steel-chest",
+"iron-chest",
+"steel-furnace",
+"stone-furnace",
+"stone-wall",
+"storage-tank",
+"substation",
+"train-stop",
+"rocket-silo",
+"satellite"])
+
+
 resourceList = set(["raw-wood", "water", "iron-ore", "copper-ore", "coal", "crude-oil", "stone", "radar"])
 
 recipesJson = None
@@ -111,7 +182,7 @@ def main():
 			recipesJson = json.load(recipefp)
 			
 			global productUsage
-			for name in necessaryRecipes:
+			for name in allowedRecipes:
 				recipeJson = recipesJson[name]
 				for ingredientJson in recipeJson["ingredients"]:
 					ingreidentName = ingredientJson["name"]
@@ -136,89 +207,82 @@ def main():
 						unlockedRecipe = effectJson["recipe"]
 						recipeRequiredItems[effectJson["recipe"]] = set(requiredItems)
 
-			BuildBus()
+			BuildBus2()
 
-
-
-def BuildBus():
+def BuildBus2():
 	recipes = set(necessaryRecipes)
-	products = set(resourceList)
-	bus = {}
-	totalWidth = 0
+	bus = set(resourceList)
 
 	while recipes != set():
-		lineClosingRecipes = GetLineClosingRecipes(bus, GetAvailableRecipes(recipes, products))
-		if lineClosingRecipes != set():
-				for recipe in lineClosingRecipes:
-					print("Close line", recipe)
-					recipes.remove(recipe)
-					AddProducts(products, recipe)
-					ConsumeLines(bus, recipe)
-		else:
-			leafRecipes = GetLeafRecipes(GetAvailableRecipes(recipes, products))
-			if leafRecipes != set():
-				for recipe in leafRecipes:
-					print("Add leaf", recipe)
-					recipes.remove(recipe)
-					AddProducts(products, recipe)
-					ConsumeLines(bus, recipe)
-			else:
-				recipe = GetBestNewLine(GetAvailableRecipes(recipes, products))
-				print("New line",recipe)
-				recipes.remove(recipe)
-				AddProducts(products, recipe)
-				ConsumeLines(bus, recipe)
-				AddLines(bus, recipe)
+		## Calculate wieght - total number of required sub recipies for remaining recipes
+		## Filter out unavailable because of research dependencies
+		weights = {}
+		for recipe in recipes:
+			s = GetSubRecipes(recipe, bus)
+			if IsAllResearched(s, bus):
+				weights[recipe] = len(s)
 
-		print(len(bus))
-		totalWidth += len(bus)
+		## Recipe that has all necessary stuff on bus has 1 weight, and is the best to use.
+		## What if we have 2 recipes with same weight? Rcipe with lower product usage takes priority
 
-	print("Total width", totalWidth)
+		best = None
+		mw = 999
+		mu = 999
+		for recipe, weight in weights.items():
+			usage = GetRecipeProductUsage(recipe)
+			if weight < mw or weight == mw and usage < mu:
+				best = recipe
+				mw = weight
+				mu = usage
+		
+		## Now we have some recipe, that may not have all ingedients on bus. 
+		## We need add all of its requrements who are not on bus first, using recursion
 
-def ConsumeLines(bus, recipe):
-	emptyLines = set()
+		recipes = recipes.difference(AddToBus(best, bus))
+
+
+def AddToBus(recipe, bus):
+	result = set()
+	result.add(recipe)
+
 	recipeJson = recipesJson[recipe]
-	for ingredientsJson in recipeJson["ingredients"]:
-		ingredientName = ingredientsJson["name"]
-		if ingredientName in bus:
-			bus[ingredientName] -= 1
-			if bus[ingredientName] == 0:
-				emptyLines.add(ingredientName)
-	for line in emptyLines:
-		del bus[line]
+	for ingredientJson in recipeJson["ingredients"]:
+		ingredientName = ingredientJson["name"]
+		if ingredientName not in bus:
+			result = result.union(AddToBus(FindRecipeByProduct(ingredientName), bus))
 
-def AddLines(bus, recipe):
-	recipeJson = recipesJson[recipe]
+	print("Do", recipe)
+
 	for productJson in recipeJson["products"]:
 		productName = productJson["name"]
-		if productName in productUsage:
-			bus[productName] = productUsage[productName]
+		bus.add(productName)
 
-def AddProducts(products, recipe):
-	recipeJson = recipesJson[recipe]
-	for productJson in recipeJson["products"]:
-		products.add(productJson["name"])
-
-def GetLineClosingRecipes(bus, recipes):
-	result = set()
-
-	for recipe in recipes:
-		recipeJson = recipesJson[recipe]
-		for ingredientsJson in recipeJson["ingredients"]:
-			ingredientName = ingredientsJson["name"]
-			if ingredientName in bus and bus[ingredientName] == 1:
-				result.add(recipe)
 	return result
 
+	
+	
+def IsAllResearched(recipes, products):
+	for recipeName in recipes:
+		if recipeName in recipeRequiredItems and not recipeRequiredItems[recipeName].issubset(products):
+			return False
+	return True
 
+def FindRecipeByProduct(product):
+	for recipe in allowedRecipes:
+		recipeJson = recipesJson[recipe]
+		for productJson in recipeJson["products"]:
+			if product == productJson["name"]:
+				return recipe
 
-def GetLeafRecipes(recipes):
+def GetSubRecipes(recipe, bus):
 	result = set()
+	result.add(recipe)
 
-	for recipe in recipes:
-		usage = GetRecipeProductUsage(recipe)
-		if usage == 0:
-			result.add(recipe)
+	recipeJson = recipesJson[recipe]
+	for ingredientJson in recipeJson["ingredients"]:
+		ingredientName = ingredientJson["name"]
+		if ingredientName not in bus:
+			result = result.union(GetSubRecipes(FindRecipeByProduct(ingredientName), bus))
 
 	return result
 
@@ -230,44 +294,6 @@ def GetRecipeProductUsage(recipe):
 	return result
 
 
-def GetBestNewLine(recipes):
-	m = 999
-	best = ""
-
-	for recipe in recipes:
-		usage = GetRecipeProductUsage(recipe)
-		if usage < m:
-			m = usage
-			best = recipe
-
-	return best
-
-
-def GetAvailableRecipes(recipes, products):
-		result = set()
-		for recipeName in recipes:
-			if recipeName not in recipeRequiredItems or recipeRequiredItems[recipeName].issubset(products):
-				ingredients = set()
-				
-				recipeJson = recipesJson[recipeName]
-				for ingredientJson in recipeJson["ingredients"]:
-					ingredients.add(ingredientJson["name"])
-
-				if ingredients.issubset(products):
-					result.add(recipeName)
-
-		return result
-
-
-		
-## udpate bus
-## find out aviable recipes with current products, including scinence packs
-## add leaf recipes
-## add new line recipe
-##     with most consumers? -- no
-##     1 добавлять сталь в начале, пока есть еще много рецептов которые можно стделать без нее - плохо
-##     2 добавлять проволоку на бас в начале ради зеленых плат, полохо - она понадобится потом не скоро!
-## ...
 
 if __name__ == '__main__':
 	main()
