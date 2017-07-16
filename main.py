@@ -1,7 +1,7 @@
 import json
 import os
 
-whiteList = set(["advanced-oil-processing",
+necessaryRecipes = set(["advanced-oil-processing",
 "accumulator",
 "advanced-circuit",
 "assembling-machine-1",
@@ -94,23 +94,23 @@ whiteList = set(["advanced-oil-processing",
 "wood",
 "rocket-silo",
 "satellite",
-"electric-furnance"])
+"electric-furnace",
+"solid-fuel-from-heavy-oil"])
 
-resourceList = set(["raw-wood", "water", "solid-fuel", "radar", "iron-ore", "copper-ore", "coal", "crude-oil", "heavy-oil", "stone"])
+resourceList = set(["raw-wood", "water", "iron-ore", "copper-ore", "coal", "crude-oil", "stone", "radar"])
 
 def main():
 	with open('recipes.json') as fp:
-		recipes = json.load(fp)
+		recipesJson = json.load(fp)
+
 		ingredientUsage = {}
 		
-		for name, recipe in recipes.items():
-			if (name in whiteList):
-				for ingredient in recipe["ingredients"]:
-					ingreidentName = ingredient["name"]
-					if ingreidentName not in resourceList:
-						ingredientUsage[ingreidentName] = ingredientUsage.get(ingreidentName, 0) + 1
-			else:
-				print(name)
+		for name in necessaryRecipes:
+			recipeJson = recipesJson[name]
+			for ingredientJson in recipeJson["ingredients"]:
+				ingreidentName = ingredientJson["name"]
+				if ingreidentName not in resourceList:
+					ingredientUsage[ingreidentName] = ingredientUsage.get(ingreidentName, 0) + 1
 
 
 		for ingredient in sorted(ingredientUsage, key=ingredientUsage.get):
