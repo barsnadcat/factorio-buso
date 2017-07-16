@@ -100,92 +100,112 @@ necessaryRecipes = set(["advanced-oil-processing",
 resourceList = set(["raw-wood", "water", "iron-ore", "copper-ore", "coal", "crude-oil", "stone", "radar"])
 
 recipesJson = None
-ingredientUsage = {}
+technologiesJson = None
+productUsage = {}
+recipeRequiredItems = {}
 
 def main():
-	with open('recipes.json') as fp:
-		global recipesJson
-		recipesJson = json.load(fp)
+	with open('technologies.json') as techfp:
+		with open('recipes.json') as recipefp:
+			global recipesJson
+			recipesJson = json.load(recipefp)
+			
+			global productUsage
+			for name in necessaryRecipes:
+				recipeJson = recipesJson[name]
+				for ingredientJson in recipeJson["ingredients"]:
+					ingreidentName = ingredientJson["name"]
+					productUsage[ingreidentName] = productUsage.get(ingreidentName, 0) + 1
 
-		global ingredientUsage
+			global technologiesJson
+			technologiesJson = json.load(techfp)
 
-		for name in necessaryRecipes:
-			recipeJson = recipesJson[name]
-			for ingredientJson in recipeJson["ingredients"]:
-				ingreidentName = ingredientJson["name"]
-				ingredientUsage[ingreidentName] = ingredientUsage.get(ingreidentName, 0) + 1
+			global recipeRequiredItems
+			for techName in technologiesJson:
+				techJson = technologiesJson[techName]
 
+				requiredItems = set()
+				techIngredientsJson = techJson['research_unit_ingredients']
+				for ingredientJson in techIngredientsJson:
+					if ingredientJson["type"] == "item":
+						requiredItems.add(ingredientJson["name"])
 
-		bus = set(resourceList)
-		recipes = set(necessaryRecipes)
+				effectsJson = techJson["effects"]
+				for effectJson in effectsJson:
+					if effectJson["type"] == "unlock-recipe":
+						unlockedRecipe = effectJson["recipe"]
+						recipeRequiredItems[effectJson["recipe"]] = set(requiredItems)
+						print(unlockedRecipe, " ", requiredItems)
 
-		while recipes != set():
-			print(bus)
-
-			leafRecipes = GetLeafRecipes(GetAvailableRecipes(recipes, bus))
-			for recipe in leafRecipes:
-				## Use recipe
-				print("Use ", recipe)
-				recipes.remove(recipe)
-		
-
-			bestNewLine = GetBestNewLine(GetAvailableRecipes(recipes, bus))
-
-			## Use recipe
-			print("Use ",bestNewLine)
-			recipes.remove(bestNewLine)
-			AddProductsToBus(bus, bestNewLine)
+			BuildBus()
 
 
+
+def BuildBus():
+	recipes = set(necessaryRecipes)
+	products = set(resourceList)
+
+	while recipes != set():
+		leafRecipes = GetLeafRecipes(GetAvailableRecipes(recipes, products))
+		for recipe in leafRecipes:
+			print("Add leaf ", recipe)
+			recipes.remove(recipe)
+			AddProducts(products, recipe)
 	
-def AddProductsToBus(bus, recipe):
+		bestNewLine = GetBestNewLine(GetAvailableRecipes(recipes, products))
+		print("New line ",bestNewLine)
+		recipes.remove(bestNewLine)
+		AddProducts(products, bestNewLine)
+
+def AddProducts(products, recipe):
 	recipeJson = recipesJson[recipe]
 	for productJson in recipeJson["products"]:
-		bus.add(productJson["name"])
+		products.add(productJson["name"])
 
 def GetLeafRecipes(recipes):
 	result = set()
 
 	for recipe in recipes:
-		totalProductUsage = GetRecipeTotalProductUsage(recipe)
-		if totalProductUsage == 0:
+		usage = GetRecipeProductUsage(recipe)
+		if usage == 0:
 			result.add(recipe)
 
 	return result
 
-def GetRecipeTotalProductUsage(recipe):
+def GetRecipeProductUsage(recipe):
 	recipeJson = recipesJson[recipe]
 	result = 0
 	for productJson in recipeJson["products"]:
-		result += ingredientUsage.get(productJson["name"], 0)
+		result += productUsage.get(productJson["name"], 0)
 	return result
 
 
 def GetBestNewLine(recipes):
-	m = 0
+	m = -1
 	best = ""
 
 	for recipe in recipes:
-		totalProductUsage = GetRecipeTotalProductUsage(recipe)
-		if totalProductUsage > m:
-			m = totalProductUsage
+		usage = GetRecipeProductUsage(recipe)
+		if usage > m:
+			m = usage
 			best = recipe
 
 	return best
 
 
-def GetAvailableRecipes(recipes, bus):
+def GetAvailableRecipes(recipes, products):
 		result = set()
 		
 		for recipeName in recipes:
-			ingredients = set()
-			
-			recipeJson = recipesJson[recipeName]
-			for ingredientJson in recipeJson["ingredients"]:
-				ingredients.add(ingredientJson["name"])
+			if recipeName not in recipeRequiredItems or recipeRequiredItems[recipeName].issubset(products):
+				ingredients = set()
+				
+				recipeJson = recipesJson[recipeName]
+				for ingredientJson in recipeJson["ingredients"]:
+					ingredients.add(ingredientJson["name"])
 
-			if ingredients.issubset(bus):
-				result.add(recipeName)
+				if ingredients.issubset(products):
+					result.add(recipeName)
 
 		return result
 
