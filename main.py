@@ -143,25 +143,74 @@ def main():
 def BuildBus():
 	recipes = set(necessaryRecipes)
 	products = set(resourceList)
+	bus = {}
+	totalWidth = 0
 
 	while recipes != set():
-		leafRecipes = GetLeafRecipes(GetAvailableRecipes(recipes, products))
-		if leafRecipes != set():
-			for recipe in leafRecipes:
-				print("Add leaf ", recipe)
+		lineClosingRecipes = GetLineClosingRecipes(bus, GetAvailableRecipes(recipes, products))
+		if lineClosingRecipes != set():
+				for recipe in lineClosingRecipes:
+					print("Close line", recipe)
+					recipes.remove(recipe)
+					AddProducts(products, recipe)
+					ConsumeLines(bus, recipe)
+		else:
+			leafRecipes = GetLeafRecipes(GetAvailableRecipes(recipes, products))
+			if leafRecipes != set():
+				for recipe in leafRecipes:
+					print("Add leaf", recipe)
+					recipes.remove(recipe)
+					AddProducts(products, recipe)
+					ConsumeLines(bus, recipe)
+			else:
+				recipe = GetBestNewLine(GetAvailableRecipes(recipes, products))
+				print("New line",recipe)
 				recipes.remove(recipe)
 				AddProducts(products, recipe)
-		else:
-			bestNewLine = GetBestNewLine(GetAvailableRecipes(recipes, products))
-			print("New line ",bestNewLine)
-			recipes.remove(bestNewLine)
-			AddProducts(products, bestNewLine)
+				ConsumeLines(bus, recipe)
+				AddLines(bus, recipe)
 
+		print(len(bus))
+		totalWidth += len(bus)
+
+	print("Total width", totalWidth)
+
+def ConsumeLines(bus, recipe):
+	emptyLines = set()
+	recipeJson = recipesJson[recipe]
+	for ingredientsJson in recipeJson["ingredients"]:
+		ingredientName = ingredientsJson["name"]
+		if ingredientName in bus:
+			bus[ingredientName] -= 1
+			if bus[ingredientName] == 0:
+				emptyLines.add(ingredientName)
+	for line in emptyLines:
+		del bus[line]
+
+def AddLines(bus, recipe):
+	recipeJson = recipesJson[recipe]
+	for productJson in recipeJson["products"]:
+		productName = productJson["name"]
+		if productName in productUsage:
+			bus[productName] = productUsage[productName]
 
 def AddProducts(products, recipe):
 	recipeJson = recipesJson[recipe]
 	for productJson in recipeJson["products"]:
 		products.add(productJson["name"])
+
+def GetLineClosingRecipes(bus, recipes):
+	result = set()
+
+	for recipe in recipes:
+		recipeJson = recipesJson[recipe]
+		for ingredientsJson in recipeJson["ingredients"]:
+			ingredientName = ingredientsJson["name"]
+			if ingredientName in bus and bus[ingredientName] == 1:
+				result.add(recipe)
+	return result
+
+
 
 def GetLeafRecipes(recipes):
 	result = set()
