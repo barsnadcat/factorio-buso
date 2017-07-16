@@ -154,7 +154,6 @@ necessaryRecipes = set([
 "stone-furnace",
 "stone-wall",
 "storage-tank",
-"train-stop",
 "rocket-silo",
 "satellite"])
 
@@ -173,7 +172,12 @@ def main():
 			recipesJson = json.load(recipefp)
 			
 			global productUsage
-			for name in allowedRecipes:
+
+			recipes = set()
+			for name in necessaryRecipes:
+				recipes = recipes.union(GetSubRecipes(name, resourceList))
+
+			for name in recipes:
 				recipeJson = recipesJson[name]
 				for ingredientJson in recipeJson["ingredients"]:
 					ingreidentName = ingredientJson["name"]
@@ -267,7 +271,7 @@ def AddToBus(recipe, products, bus):
 			print("New line", productName)
 			bus[productName] = usage
 
-	print(len(bus), bus.keys())
+	##print(len(bus), bus.keys())
 
 	return result
 
