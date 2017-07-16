@@ -101,10 +101,7 @@ necessaryRecipes = set([
 "assembling-machine-1",
 "assembling-machine-2",
 "boiler",
-"cargo-wagon",
 "chemical-plant",
-"concrete",
-"hazard-concrete",
 "construction-robot",
 "logistic-robot",
 "electric-mining-drill",
@@ -123,13 +120,11 @@ necessaryRecipes = set([
 "stack-inserter",
 "filter-inserter",
 "firearm-magazine",
-"fluid-wagon",
 "gate",
 "grenade",
 "gun-turret",
 "lab",
 "laser-turret",
-"locomotive",
 "logistic-chest-passive-provider",
 "logistic-chest-storage",
 "long-handed-inserter",
@@ -141,9 +136,6 @@ necessaryRecipes = set([
 "pipe",
 "pipe-to-ground",
 "pumpjack",
-"rail",
-"rail-chain-signal",
-"rail-signal",
 "repair-pack",
 "roboport",
 "rocket-part",
@@ -162,7 +154,6 @@ necessaryRecipes = set([
 "stone-furnace",
 "stone-wall",
 "storage-tank",
-"substation",
 "train-stop",
 "rocket-silo",
 "satellite"])
@@ -211,18 +202,19 @@ def main():
 
 def BuildBus2():
 	recipes = set(necessaryRecipes)
-	bus = set(resourceList)
+	products = set(resourceList)
+	bus = {}
 
 	while recipes != set():
 		## Calculate wieght - total number of required sub recipies for remaining recipes
 		## Filter out unavailable because of research dependencies
 		weights = {}
 		for recipe in recipes:
-			s = GetSubRecipes(recipe, bus)
-			if IsAllResearched(s, bus):
+			s = GetSubRecipes(recipe, products)
+			if IsAllResearched(s, products):
 				weights[recipe] = len(s)
 
-		## Recipe that has all necessary stuff on bus has 1 weight, and is the best to use.
+		## Recipe that has all necessary stuff on products has 1 weight, and is the best to use.
 		## What if we have 2 recipes with same weight? Rcipe with lower product usage takes priority
 
 		best = None
@@ -235,27 +227,47 @@ def BuildBus2():
 				mw = weight
 				mu = usage
 		
-		## Now we have some recipe, that may not have all ingedients on bus. 
-		## We need add all of its requrements who are not on bus first, using recursion
+		## Now we have some recipe, that may not have all ingedients on products. 
+		## We need add all of its requrements who are not on products first, using recursion
 
-		recipes = recipes.difference(AddToBus(best, bus))
+		recipes = recipes.difference(AddToBus(best, products, bus))
 
 
-def AddToBus(recipe, bus):
+def AddToBus(recipe, products, bus):
 	result = set()
 	result.add(recipe)
 
 	recipeJson = recipesJson[recipe]
 	for ingredientJson in recipeJson["ingredients"]:
 		ingredientName = ingredientJson["name"]
-		if ingredientName not in bus:
-			result = result.union(AddToBus(FindRecipeByProduct(ingredientName), bus))
+		if ingredientName not in products:
+			result = result.union(AddToBus(FindRecipeByProduct(ingredientName), products, bus))
+
+
+	for ingredientJson in recipeJson["ingredients"]:
+		ingredientName = ingredientJson["name"]
+		## Introducing new resource
+		if ingredientName not in bus and ingredientName in resourceList:
+			print("New line", ingredientName)
+			bus[ingredientName] = productUsage[ingredientName]
+		## Using stuff on bus
+		bus[ingredientName] -= 1
+		## Droping stuff from bus
+		if bus[ingredientName] == 0:
+			print("Close line", ingredientName)
+			del bus[ingredientName]
 
 	print("Do", recipe)
 
 	for productJson in recipeJson["products"]:
 		productName = productJson["name"]
-		bus.add(productName)
+		products.add(productName)
+		usage = productUsage.get(productName, 0)
+		if usage > 0:
+			print("New line", productName)
+			bus[productName] = usage
+
+	print(len(bus), bus.keys())
 
 	return result
 
@@ -274,15 +286,15 @@ def FindRecipeByProduct(product):
 			if product == productJson["name"]:
 				return recipe
 
-def GetSubRecipes(recipe, bus):
+def GetSubRecipes(recipe, products):
 	result = set()
 	result.add(recipe)
 
 	recipeJson = recipesJson[recipe]
 	for ingredientJson in recipeJson["ingredients"]:
 		ingredientName = ingredientJson["name"]
-		if ingredientName not in bus:
-			result = result.union(GetSubRecipes(FindRecipeByProduct(ingredientName), bus))
+		if ingredientName not in products:
+			result = result.union(GetSubRecipes(FindRecipeByProduct(ingredientName), products))
 
 	return result
 
