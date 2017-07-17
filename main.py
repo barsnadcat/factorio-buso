@@ -143,7 +143,6 @@ necessaryRecipes = set([
 "high-tech-science-pack",
 "production-science-pack",
 "military-science-pack",
-"small-electric-pole",
 "big-electric-pole",
 "steam-engine",
 "steel-chest",
@@ -207,6 +206,8 @@ def BuildBus2():
 	products = set(resourceList)
 	bus = {}
 
+	## Low volume line, that has all inputs on bus, can be removed right after each usage, and readded for each usage.
+
 	while recipes != set():
 		## Calculate wieght - total number of required sub recipies for remaining recipes
 		## Filter out unavailable because of research dependencies
@@ -248,16 +249,19 @@ def AddToBus(recipe, products, bus):
 
 	for ingredientJson in recipeJson["ingredients"]:
 		ingredientName = ingredientJson["name"]
+		usage = productUsage[ingredientName]
 		## Introducing new resource
 		if ingredientName not in bus and ingredientName in resourceList:			
-			bus[ingredientName] = productUsage[ingredientName]
-			print("New line", ingredientName, len(bus))
+			bus[ingredientName] = usage
+			if usage > 1:
+				print("New line", ingredientName, len(bus))
 		## Using stuff on bus
 		bus[ingredientName] -= 1
 		## Droping stuff from bus
 		if bus[ingredientName] == 0:
 			del bus[ingredientName]
-			print("Close line", ingredientName, len(bus))
+			if ingredientName not in resourceList and usage > 1:
+				print("Close line", ingredientName, len(bus))
 
 	print("Do", recipe)
 
@@ -269,7 +273,6 @@ def AddToBus(recipe, products, bus):
 			bus[productName] = usage
 			print("New line", productName, len(bus))
 
-	##print(len(bus), bus.keys())
 
 	return result
 
