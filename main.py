@@ -180,6 +180,9 @@ def main():
 					ingreidentName = ingredientJson["name"]
 					productUsage[ingreidentName] = productUsage.get(ingreidentName, 0) + 1
 
+			for product in sorted(productUsage, key=productUsage.get):
+				print(productUsage[product],  '\t', product)
+
 			global technologiesJson
 			technologiesJson = json.load(techfp)
 
@@ -202,7 +205,8 @@ def main():
 			BuildBus2()
 
 def BuildBus2():
-	recipes = set(necessaryRecipes)
+	print("Go!")
+	recipes = GetLeafRecipes(necessaryRecipes)	
 	products = set(resourceList)
 	bus = {}
 
@@ -235,6 +239,13 @@ def BuildBus2():
 
 		recipes = recipes.difference(AddToBus(best, products, bus))
 
+def GetLeafRecipes(recipes):
+	result = set()
+	for recipe in recipes:
+		if GetRecipeProductUsage(recipe) == 0:
+			result.add(recipe)
+
+	return result
 
 def AddToBus(recipe, products, bus):
 	result = set()
@@ -253,15 +264,13 @@ def AddToBus(recipe, products, bus):
 		## Introducing new resource
 		if ingredientName not in bus and ingredientName in resourceList:			
 			bus[ingredientName] = usage
-			if usage > 1:
-				print("New line", ingredientName, len(bus))
+			print("New line", ingredientName, len(bus))
 		## Using stuff on bus
 		bus[ingredientName] -= 1
 		## Droping stuff from bus
 		if bus[ingredientName] == 0:
 			del bus[ingredientName]
-			if ingredientName not in resourceList and usage > 1:
-				print("Close line", ingredientName, len(bus))
+			print("Close line", ingredientName, len(bus))
 
 	print("Do", recipe)
 
