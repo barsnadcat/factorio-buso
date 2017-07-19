@@ -152,6 +152,7 @@ necessaryRecipes = set([
 "stone-wall",
 "storage-tank",
 "rocket-silo",
+"small-electric-pole",
 "satellite"])
 
 
@@ -209,32 +210,78 @@ def BuildBus2():
 	recipes = GetLeafRecipes(necessaryRecipes)	
 	products = set(resourceList)
 	bus = {}
+	totalBus = 0
 
 	## Low volume line, that has all inputs on bus, can be removed right after each usage, and readded for each usage.
 
 	while recipes != set():
 		## Filter out unavailable because of research dependencies
-		## Calcualte lane balance = new lines - products
-		## Recipes with smaller lane balance are better
-		## Calculate wieght - total number of required sub recipies for remaining recipes
+		## Calculate wieght - total number of required sub recipies for leaf recipe
 		## Recipe that has all necessary stuff on products has 1 weight, and is the best to use.
+		## Storage tank problem - it has low weight, and low usage of components, but steel it introduces
+		## is not going to be used by next like 5 productions, and it can be moved later at line.
+		## We can calculate most needed lines for current available recipes, and use this as... well this is updated usage,
+		## and inverted comparsion.
+		## This steel does not help. Probably usage should include parent usage as well -- copper cable usage is low, 
+		## but actually it helps alot.
+		## !
+		## Weight is number of new parents, with current bus, should include new lines count - removed lines count
+		## Usage is number of children
+		## What we need actually is count of new lines added specifically for this recipe. If other recipe adds lines, 
+		## but they are used by another available recipe - it has higer priority.
+		## Local usage how to account usage with children - copper wire is used not only by EC, but by all who use EC as well.
 
 		best = None
-		mw = 999
-		mu = 999
+		mw = 99999
+		ml = 99999
+		mu = 99999
+
+		localUsage = {}
+		for recipe in recipes:
+			s = GetSubRecipes(recipe, products)
+			if IsAllResearched(s, products):
+				for subRecipe in s:			
+					recipeJson = recipesJson[subRecipe]
+					for ingredientJson in recipeJson["ingredients"]:
+						ingreidentName = ingredientJson["name"]
+						localUsage[ingreidentName] = localUsage.get(ingreidentName, 0) + 1
 
 		for recipe in recipes:
 			s = GetSubRecipes(recipe, products)
 			if IsAllResearched(s, products):
 				weight = len(s)
+
+				newLines = 0 #number of new unique lines for this recipe
+				
+				for subRecipe in s:
+					recipeJson = recipesJson[subRecipe]	
+					for productJson in recipeJson["products"]:
+						productName = productJson["name"]
+						if productName in localUsage:
+							if localUsage[productName] == 1:
+								newLines += 1
+								#print("_____", recipe, "New line", productName)
+					for ingredientJson in recipeJson["ingredients"]:
+						ingredientName = ingredientJson["name"]
+						if ingredientName in bus:
+							if bus[ingredientName] == 1:
+								newLines -= 1
+								#print("_____", recipe, "Remove from bus", ingredientName)
+						else:
+							if ingredientName not in resourceList and productUsage[ingredientName] == 1:
+								newLines -= 1
+								#print("_____", recipe, "Remove just added from bus", ingredientName)
+
 				totalUsage = 0
 				for subRecipe in s:
 					totalUsage += GetRecipeProductUsage(subRecipe)
-	
-				print("   ", "weight", weight, "usage", totalUsage, recipe)
-				if weight < mw or weight == mw and totalUsage < mu:
+
+				print("   ", "newLines", newLines, "weight", weight,  "usage", totalUsage, recipe)
+				if newLines < ml or newLines == ml and weight < mw or newLines == ml and weight == mw and totalUsage < mu:
+				#if weight < mw or weight == mw and newLines < ml:
 					best = recipe
 					mw = weight
+					ml = newLines
 					mu = totalUsage
 					
 
@@ -243,6 +290,9 @@ def BuildBus2():
 		## We need add all of its requrements who are not on products first, using recursion
 
 		recipes = recipes.difference(AddToBus(best, products, bus))
+		totalBus += len(bus)
+
+	print(totalBus)
 
 
 def GetLeafRecipes(recipes):
