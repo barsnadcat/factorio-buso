@@ -180,15 +180,15 @@ def GoDeeper(recipes, products, bus, plan, score):
 	global minScore
 	global bestPlan
 	if recipes == set():
-		print("End plan", score, plan)
+		
 		if score < minScore or bestPlan == None:
 			minScore = score
 			bestPlan = plan
+			print("New best plan", score, plan)
 			
 	else:
 		for recipe in recipes:
-			s = GetSubRecipes(recipe, products)
-			if IsAllResearched(s, products):
+			if IsValid(recipe, products):
 				
 				newPlan = list(plan)
 				newBus = dict(bus)
