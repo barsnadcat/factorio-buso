@@ -161,6 +161,7 @@ recipesJson = None
 technologiesJson = None
 productUsage = {}
 recipeRequiredItems = {}
+productRecipes = {}
 
 minScore = 999999
 bestPlan = None
@@ -172,10 +173,19 @@ def main():
 			recipesJson = json.load(recipefp)
 			
 			global productUsage
+			global productRecipes
+
+			for name in allowedRecipes:
+				recipeJson = recipesJson[name]
+				for productJson in recipeJson["products"]:
+					productRecipes[productJson["name"]] = name
+			print (productRecipes)
 
 			recipes = set()
 			for name in necessaryRecipes:
 				recipes = recipes.union(GetSubRecipes(name, resourceList))
+
+
 
 			for name in recipes:
 				recipeJson = recipesJson[name]
@@ -233,7 +243,7 @@ def GoDeeper(recipes, products, bus, plan, score):
 				newPlan.append(recipe)
 				score += len(newBus)
 
-				print("Depth", len(newPlan), "score", score, plan)
+				#print("Depth", len(newPlan), "score", score, plan)
 
 				GoDeeper(newRecipes, newProducts, newBus , newPlan, score)
 
@@ -254,7 +264,7 @@ def AddToBus(recipe, products, bus):
 	for ingredientJson in recipeJson["ingredients"]:
 		ingredientName = ingredientJson["name"]
 		if ingredientName not in products:
-			result = result.union(AddToBus(FindRecipeByProduct(ingredientName), products, bus))
+			result = result.union(AddToBus(productRecipes[ingredientName], products, bus))
 
 
 	for ingredientJson in recipeJson["ingredients"]:
@@ -292,12 +302,6 @@ def IsAllResearched(recipes, products):
 			return False
 	return True
 
-def FindRecipeByProduct(product):
-	for recipe in allowedRecipes:
-		recipeJson = recipesJson[recipe]
-		for productJson in recipeJson["products"]:
-			if product == productJson["name"]:
-				return recipe
 
 def GetSubRecipes(recipe, products):
 	result = set()
@@ -307,7 +311,7 @@ def GetSubRecipes(recipe, products):
 	for ingredientJson in recipeJson["ingredients"]:
 		ingredientName = ingredientJson["name"]
 		if ingredientName not in products:
-			result = result.union(GetSubRecipes(FindRecipeByProduct(ingredientName), products))
+			result = result.union(GetSubRecipes(productRecipes[ingredientName], products))
 
 	return result
 
