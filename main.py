@@ -162,6 +162,9 @@ technologiesJson = None
 productUsage = {}
 recipeRequiredItems = {}
 
+minScore = 999999
+bestPlan = None
+
 def main():
 	with open('technologies.json') as techfp:
 		with open('recipes.json') as recipefp:
@@ -202,47 +205,37 @@ def main():
 						unlockedRecipe = effectJson["recipe"]
 						recipeRequiredItems[effectJson["recipe"]] = set(requiredItems)
 
-			BuildBus2()
+			print("Go!")
+			GoDeeper(GetLeafRecipes(necessaryRecipes), set(resourceList), {}, [], 0)
+	
 
-def BuildBus2():
-	print("Go!")
-	recipes = GetLeafRecipes(necessaryRecipes)	
-	products = set(resourceList)
-	bus = {}
 
-	## Low volume line, that has all inputs on bus, can be removed right after each usage, and readded for each usage.
-
-	while recipes != set():
-		## Filter out unavailable because of research dependencies
-		## Calcualte lane balance = new lines - products
-		## Recipes with smaller lane balance are better
-		## Calculate wieght - total number of required sub recipies for remaining recipes
-		## Recipe that has all necessary stuff on products has 1 weight, and is the best to use.
-
-		best = None
-		mw = 999
-		mu = 999
-
+def GoDeeper(recipes, products, bus, plan, score):
+	global minScore
+	global bestPlan
+	if recipes == set():
+		if score < minScore or bestPlan == None:
+			minScore = score
+			bestPlan = plan
+			print("New best plan", score, plan)
+	else:
 		for recipe in recipes:
 			s = GetSubRecipes(recipe, products)
 			if IsAllResearched(s, products):
-				weight = len(s)
-				totalUsage = 0
-				for subRecipe in s:
-					totalUsage += GetRecipeProductUsage(subRecipe)
-	
-				print("   ", "weight", weight, "usage", totalUsage, recipe)
-				if weight < mw or weight == mw and totalUsage < mu:
-					best = recipe
-					mw = weight
-					mu = totalUsage
-					
+				
+				newPlan = list(plan)
+				newBus = dict(bus)
+				newProducts = set(products)
+				newRecipes = set(recipes)
 
-		
-		## Now we have some recipe, that may not have all ingedients on products. 
-		## We need add all of its requrements who are not on products first, using recursion
+				newRecipes = newRecipes.difference(AddToBus(recipe, newProducts, newBus))
 
-		recipes = recipes.difference(AddToBus(best, products, bus))
+				newPlan.append(recipe)
+				score += len(newBus)
+
+				print("Depth", len(newPlan), "score", score, plan)
+
+				GoDeeper(newRecipes, newProducts, newBus , newPlan, score)
 
 
 def GetLeafRecipes(recipes):
@@ -270,15 +263,15 @@ def AddToBus(recipe, products, bus):
 		## Introducing new resource
 		if ingredientName not in bus and ingredientName in resourceList:			
 			bus[ingredientName] = usage
-			print("New line", ingredientName, len(bus))
+			#print("New line", ingredientName, len(bus))
 		## Using stuff on bus
 		bus[ingredientName] -= 1
 		## Droping stuff from bus
 		if bus[ingredientName] == 0:
 			del bus[ingredientName]
-			print("Close line", ingredientName, len(bus))
+			#print("Close line", ingredientName, len(bus))
 
-	print("Do", recipe)
+	#print("Do", recipe)
 
 	for productJson in recipeJson["products"]:
 		productName = productJson["name"]
@@ -286,7 +279,7 @@ def AddToBus(recipe, products, bus):
 		usage = productUsage.get(productName, 0)
 		if usage > 0:
 			bus[productName] = usage
-			print("New line", productName, len(bus))
+			#print("New line", productName, len(bus))
 
 
 	return result
