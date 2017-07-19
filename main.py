@@ -213,31 +213,37 @@ def BuildBus2():
 	## Low volume line, that has all inputs on bus, can be removed right after each usage, and readded for each usage.
 
 	while recipes != set():
-		## Calculate wieght - total number of required sub recipies for remaining recipes
 		## Filter out unavailable because of research dependencies
-		weights = {}
-		for recipe in recipes:
-			s = GetSubRecipes(recipe, products)
-			if IsAllResearched(s, products):
-				weights[recipe] = len(s)
-
+		## Calcualte lane balance = new lines - products
+		## Recipes with smaller lane balance are better
+		## Calculate wieght - total number of required sub recipies for remaining recipes
 		## Recipe that has all necessary stuff on products has 1 weight, and is the best to use.
-		## What if we have 2 recipes with same weight? Rcipe with lower product usage takes priority
 
 		best = None
 		mw = 999
 		mu = 999
-		for recipe, weight in weights.items():
-			usage = GetRecipeProductUsage(recipe)
-			if weight < mw or weight == mw and usage < mu:
-				best = recipe
-				mw = weight
-				mu = usage
+
+		for recipe in recipes:
+			s = GetSubRecipes(recipe, products)
+			if IsAllResearched(s, products):
+				weight = len(s)
+				totalUsage = 0
+				for subRecipe in s:
+					totalUsage += GetRecipeProductUsage(subRecipe)
+	
+				print("   ", "weight", weight, "usage", totalUsage, recipe)
+				if weight < mw or weight == mw and totalUsage < mu:
+					best = recipe
+					mw = weight
+					mu = totalUsage
+					
+
 		
 		## Now we have some recipe, that may not have all ingedients on products. 
 		## We need add all of its requrements who are not on products first, using recursion
 
 		recipes = recipes.difference(AddToBus(best, products, bus))
+
 
 def GetLeafRecipes(recipes):
 	result = set()
