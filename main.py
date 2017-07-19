@@ -98,61 +98,16 @@ allowedRecipes = set(["basic-oil-processing",
 "solid-fuel-from-heavy-oil"])
 
 necessaryRecipes = set([
-"assembling-machine-1",
-"assembling-machine-2",
-"boiler",
-"chemical-plant",
-"construction-robot",
-"logistic-robot",
-"electric-mining-drill",
-"express-splitter",
-"express-transport-belt",
-"express-underground-belt",
-"fast-splitter",
-"fast-transport-belt",
-"fast-underground-belt",
-"splitter",
-"transport-belt",
-"underground-belt",
-"inserter",
-"fast-inserter",
-"stack-filter-inserter",
-"stack-inserter",
-"filter-inserter",
-"firearm-magazine",
-"gun-turret",
-"lab",
-"laser-turret",
-"logistic-chest-passive-provider",
-"logistic-chest-storage",
-"long-handed-inserter",
-"low-density-structure",
-"medium-electric-pole",
-"offshore-pump",
-"oil-refinery",
-"piercing-rounds-magazine",
-"pipe",
-"pipe-to-ground",
-"pumpjack",
-"repair-pack",
-"roboport",
-"rocket-part",
 "science-pack-1",
 "science-pack-2",
 "science-pack-3",
 "high-tech-science-pack",
 "production-science-pack",
 "military-science-pack",
-"big-electric-pole",
 "steam-engine",
 "steel-chest",
 "iron-chest",
-"steel-furnace",
-"stone-furnace",
-"stone-wall",
-"storage-tank",
-"rocket-silo",
-"satellite"])
+"steel-furnace"])
 
 
 resourceList = set(["raw-wood", "water", "iron-ore", "copper-ore", "coal", "crude-oil", "stone", "radar"])
@@ -217,6 +172,7 @@ def main():
 
 			print("Go!")
 			GoDeeper(GetLeafRecipes(necessaryRecipes), set(resourceList), {}, [], 0)
+			print("Best plan", minScore, bestPlan)
 	
 
 
@@ -224,10 +180,11 @@ def GoDeeper(recipes, products, bus, plan, score):
 	global minScore
 	global bestPlan
 	if recipes == set():
+		print("End plan", score, plan)
 		if score < minScore or bestPlan == None:
 			minScore = score
 			bestPlan = plan
-			print("New best plan", score, plan)
+			
 	else:
 		for recipe in recipes:
 			s = GetSubRecipes(recipe, products)
@@ -241,11 +198,24 @@ def GoDeeper(recipes, products, bus, plan, score):
 				newRecipes = newRecipes.difference(AddToBus(recipe, newProducts, newBus))
 
 				newPlan.append(recipe)
-				score += len(newBus)
+				newScore = score + len(newBus)
 
 				#print("Depth", len(newPlan), "score", score, plan)
 
-				GoDeeper(newRecipes, newProducts, newBus , newPlan, score)
+				GoDeeper(newRecipes, newProducts, newBus , newPlan, newScore)
+
+
+def IsValid(recipe, products):
+	if recipe in recipeRequiredItems and not recipeRequiredItems[recipe].issubset(products):
+		return False
+
+	recipeJson = recipesJson[recipe]
+	for ingredientJson in recipeJson["ingredients"]:
+		ingredientName = ingredientJson["name"]
+		if ingredientName not in products:
+			if not IsValid(productRecipes[ingredientName], products):
+				return False
+	return True
 
 
 def GetLeafRecipes(recipes):
