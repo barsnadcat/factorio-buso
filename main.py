@@ -94,7 +94,6 @@ allowedRecipes = set(["basic-oil-processing",
 resourceList = set(["raw-wood", "water", "iron-ore", "copper-ore", "coal", "crude-oil", "stone"])
 
 recipesJson = None
-recipeRequiredItems = {}
 
 def main():
 	with open('recipes.json') as recipefp:
