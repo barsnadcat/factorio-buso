@@ -87,7 +87,9 @@ allowedRecipes = set(["basic-oil-processing",
 "solid-fuel-from-heavy-oil",
 "radar"])
 
-
+# pump
+# flame trower ammo
+# landfill
 
 resourceList = set(["raw-wood", "water", "iron-ore", "copper-ore", "coal", "crude-oil", "stone"])
 
