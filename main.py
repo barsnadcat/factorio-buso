@@ -28,6 +28,7 @@ allowedRecipes = set(["basic-oil-processing",
 "fluid-wagon",
 "cargo-wagon",
 "train-stop",
+"pump",
 "locomotive",
 "gate",
 "grenade",
@@ -81,15 +82,13 @@ allowedRecipes = set(["basic-oil-processing",
 "transport-belt",
 "underground-belt",
 "wood",
+"flamethrower-ammo",
+"landfill",
 "rocket-silo",
 "satellite",
 "electric-furnace",
 "solid-fuel-from-heavy-oil",
 "radar"])
-
-# pump
-# flame trower ammo
-# landfill
 
 resourceList = set(["raw-wood", "water", "iron-ore", "copper-ore", "coal", "crude-oil", "stone"])
 
