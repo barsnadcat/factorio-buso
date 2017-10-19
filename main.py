@@ -88,9 +88,28 @@ allowedRecipes = set(["basic-oil-processing",
 "satellite",
 "electric-furnace",
 "solid-fuel-from-heavy-oil",
-"radar"])
+"radar",
+"rail-signal",
+"rail-chain-signal"])
+
 
 resourceList = set(["raw-wood", "water", "iron-ore", "copper-ore", "coal", "crude-oil", "stone"])
+
+targetProductList = [
+"rocket-control-unit", "rocket-fuel", "low-density-structure", "rocket-silo", "satellite",
+"science-pack-1", "science-pack-2", "science-pack-3", "military-science-pack", "high-tech-science-pack", "production-science-pack", 
+"splitter", "fast-splitter",
+"transport-belt", "fast-transport-belt",
+"underground-belt", "fast-underground-belt",
+"fast-inserter", "long-handed-inserter",
+"roboport", "logistic-chest-passive-provider", "logistic-chest-storage", "logistic-robot", "construction-robot",
+"pipe", "pipe-to-ground", "offshore-pump", "storage-tank",
+"piercing-rounds-magazine", "flamethrower-ammo", "repair-pack",
+"steel-furnace", "pumpjack", "assembling-machine-2", "lab", "chemical-plant", "electric-mining-drill",
+"steam-engine",  "big-electric-pole", "medium-electric-pole", "boiler", "accumulator",
+"landfill", "gate", "stone-wall", "radar", "laser-turret", "concrete", "gun-turret",
+"fluid-wagon", "cargo-wagon", "train-stop", "pump", "locomotive", "rail", "rail-signal", "rail-chain-signal"
+]
 
 recipesJson = None
 
@@ -100,13 +119,9 @@ def main():
         recipesJson = json.load(recipefp)
         
         bus = {}
-        recipes = set(allowedRecipes)
 
-        for recipe in recipes:
-            AddToBus(recipesJson[recipe], bus, 1)
-
-        for product in sorted(bus, key=bus.get):
-            print(bus[product],  '\t', product)
+        for product in targetProductList:
+        	bus[product] = 1
 
         while len(bus) > 11:
             uslessProduct = min(bus, key=bus.get)     
@@ -125,7 +140,7 @@ def AddToBus(recipeJson, bus, usage):
     for ingredientJson in recipeJson["ingredients"]:
         ingreidentName = ingredientJson["name"]
         bus[ingreidentName] = bus.get(ingreidentName, 0) + usage
-        print("Add", ingreidentName, usage)
+        print("Add", ingreidentName, usage, recipeJson["name"])
     
 def RemoveFromBus(product, bus):
 
