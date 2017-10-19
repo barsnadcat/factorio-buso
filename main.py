@@ -99,51 +99,50 @@ def main():
         global recipesJson
         recipesJson = json.load(recipefp)
         
-        productUsage = {}
+        bus = {}
         recipes = set(allowedRecipes)
 
         for recipe in recipes:
-            UpdateProductUsage(recipesJson[recipe], productUsage, 1)
+            AddToBus(recipesJson[recipe], bus, 1)
 
-        for product in sorted(productUsage, key=productUsage.get):
-            print(productUsage[product],  '\t', product)
+        for product in sorted(bus, key=bus.get):
+            print(bus[product],  '\t', product)
 
-        while len(productUsage) > 10:
-            uslessProduct = min(productUsage, key=productUsage.get)     
-            print("Removing", uslessProduct)
-            RemoveFromBus(uslessProduct, productUsage)
+        while len(bus) > 11:
+            uslessProduct = min(bus, key=bus.get)     
+            RemoveFromBus(uslessProduct, bus)
 
-        for product in sorted(productUsage, key=productUsage.get):
-            print(productUsage[product],  '\t', product)
+        for product in sorted(bus, key=bus.get):
+            print(bus[product],  '\t', product)
 
 
-def UpdateProductUsage(recipeJson, productUsage, usage):
+def AddToBus(recipeJson, bus, usage):
     if  recipeJson["category"] == "smelting":
         fuel = "coal"
-        productUsage[fuel] = productUsage.get(fuel, 0) + usage
-        print("Adding coal to", recipeJson["name"])
+        bus[fuel] = bus.get(fuel, 0) + usage
+        print("Add coal", usage, recipeJson["name"])
         
     for ingredientJson in recipeJson["ingredients"]:
         ingreidentName = ingredientJson["name"]
-        productUsage[ingreidentName] = productUsage.get(ingreidentName, 0) + usage
+        bus[ingreidentName] = bus.get(ingreidentName, 0) + usage
+        print("Add", ingreidentName, usage)
     
-def RemoveFromBus(product, productUsage):
+def RemoveFromBus(product, bus):
 
     if product in resourceList:
-        del productUsage[product]
+        print("Del", product, bus[product])
+        del bus[product]
     else:
         recipe = FindRecipeByProduct(product)
-        print("Found recipe", recipe)
         recipeJson = recipesJson[recipe]
-        usage = productUsage[product]
+        usage = bus[product]
 
-        for productJson in recipeJson["products"]:
-            productName = productJson["name"]
-            ## Adding ingredients to bus for each usage of each product
-            UpdateProductUsage(recipeJson, productUsage, usage)
-            ## Removing product from bus
-            print("Del", productName)
-            del productUsage[productName]
+        ## Adding/updating usage of ingredients to bus
+        AddToBus(recipeJson, bus, usage)
+
+        ## Removing product from bus
+        print("Del", product, bus[product], recipe)
+        del bus[product]
 
 
 def FindRecipeByProduct(product):
