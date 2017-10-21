@@ -1,6 +1,6 @@
 import json
 import os
-import random
+import sys
 
 #This recipes create loops in production tree - script is not ready for them
 blockedRecipes = set(["advanced-oil-processing", "heavy-oil-cracking", "light-oil-cracking", "coal-liquefaction",
@@ -27,56 +27,86 @@ targetProductList = [
 
 recipesJson = None
 
-
 def main():
     with open('recipes.json') as recipefp:
         global recipesJson
         recipesJson = json.load(recipefp)
                 
-        bus = set()
-        bus.update(targetProductList)
-        bus.update(resourceList)
-        
-        complexProduct = GetMostComplexProduct(bus)
-        while complexProduct:
-            RemoveFromBus(complexProduct, bus)
-            complexProduct = GetMostComplexProduct(bus)
+        bus = {}
 
-        print(bus)
+        for product in targetProductList:
+            AddIngredientsToBus(product, bus, 1)
 
-def GetMostComplexProduct(bus):
-        complexProduct = None
-        complexity = 2;
-        
-        for product in bus:
-            newComplexity = GetProuductComplexity(product, bus)
-            if newComplexity > complexity:
-                complexProduct = product
-                complexity = newComplexity
-        
-        print("Most complex", complexProduct, complexity)
-        return complexProduct
+        while len(bus) > 11:
+            uslessProduct = GetMostUselessProduct(bus)    
+            RemoveFromBus(uslessProduct, bus)
 
-def AddIngredientsToBus(product, bus):
+        for product in sorted(bus, key=bus.get):
+            print(bus[product],  '\t', product)
+
+        totalComplexity = 0
+        for product in targetProductList:
+            complexity = GetProductComplexity(product, bus)
+            print(product, complexity)
+            totalComplexity += complexity
+        print(totalComplexity)
+
+def GetMostUselessProduct(bus):
+    uslessProduct = None
+    minUsage = sys.maxsize
+    minComplexity = sys.maxsize
+    maxComplexity = -1
+    for product, usage in bus.items():
+        complexity = GetProductComplexity(product, bus)
+        if usage < minUsage or usage == minUsage and complexity < minComplexity:
+            minUsage = usage
+            minComplexity = complexity
+            uslessProduct = product
+
+    print("Most useless", uslessProduct, minUsage, minComplexity)
+    return uslessProduct
+
+
+
+def GetProductComplexity(product, bus):
+    complexity = 1
+    if product not in resourceList:
+        recipeJson = FindRecipeByProduct(product)
+        for ingredientJson in recipeJson["ingredients"]:
+            ingreidentName = ingredientJson["name"]
+            if ingreidentName not in bus:
+                complexity += GetProductComplexity(ingreidentName, bus)
+
+        complexity = complexity * len(recipeJson["products"])
+        
+    return complexity
+
+
+
+def AddIngredientsToBus(product, bus, usage):
     recipeJson = FindRecipeByProduct(product)
     print("Proudct", product, "recipe", recipeJson["name"])
-    if  recipeJson["category"] == "smelting":
-        fuel = "coal"
-        bus.add(fuel)
-        print("Add coal", recipeJson["name"])
+    #if  recipeJson["category"] == "smelting":
+    #    fuel = "coal"
+    #    bus[fuel] = bus.get(fuel, 0) + usage
+    #    print("Add coal", usage, recipeJson["name"])
         
     for ingredientJson in recipeJson["ingredients"]:
         ingreidentName = ingredientJson["name"]
-        bus.add(ingreidentName)
-        print("Add", ingreidentName)
+        if ingreidentName not in resourceList:
+            bus[ingreidentName] = bus.get(ingreidentName, 0) + usage
+            print("Add", ingreidentName, usage)
     
 def RemoveFromBus(product, bus):
-    print("Remove", product)
+    print("Remove", product, bus[product])
     
-    if product not in resourceList:        
-        AddIngredientsToBus(product, bus)
-        
-    bus.remove(product)
+    if product in resourceList:
+        del bus[product]
+    else:        
+        ## Adding/updating usage of ingredients to bus
+        usage = bus[product]
+        AddIngredientsToBus(product, bus, usage)
+        del bus[product]
 
 
 def FindRecipeByProduct(product):    
@@ -86,17 +116,6 @@ def FindRecipeByProduct(product):
                 if product == productJson["name"]:
                     return recipeJson
         
-def GetProuductComplexity(product, bus):
-    complexity = 1
-    if product not in resourceList:
-        recipeJson = FindRecipeByProduct(product)
-        for ingredientJson in recipeJson["ingredients"]:
-            ingreidentName = ingredientJson["name"]
-            if ingreidentName not in bus:
-                complexity += GetProuductComplexity(ingreidentName, bus)
-    
-    #print("Complexity", product, complexity)
-    return complexity
 
 
 
